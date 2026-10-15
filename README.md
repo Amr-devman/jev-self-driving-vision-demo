@@ -1,4 +1,4 @@
-# Jev — self-driving vision demo
+# jev-self-driving-vision-demo
 
 Object detection over a dashcam video where **every frame is a Jev question**:
 TypeSafe's System One model boxes cars, motorcycles and buses frame by frame,
@@ -11,12 +11,12 @@ Built from the TypeSafe docs: [images](https://docs.typesafe.ai/images),
 
 ```mermaid
 flowchart LR
-    A[clip/<br/>dashcam_23h00-24h00.mp4<br/>60 s, 28.617 fps] --> B[extract<br/>ffmpeg]
-    B -->|1717 frames| C[detect 1 frame in 4<br/>Jev vision]
-    B -->|every frame| D[render<br/>Pillow]
+    A["clip/dashcam_23h00-24h00.mp4<br/>60 s, 28.617 fps"] --> B[extract<br/>ffmpeg]
+    B -->|1717 frames| C["detect 1 frame in 4<br/>Jev vision"]
+    B -->|every frame| D["render<br/>Pillow"]
     C -->|answers cached as JSON| D
-    D -->|boxes + HUD| E[encode<br/>ffmpeg]
-    E --> F[out/jev-vision_*.mp4]
+    D -->|boxes + HUD| E["encode<br/>ffmpeg"]
+    E --> F["out/jev-vision_*.mp4"]
 ```
 
 ## What the demo shows
@@ -70,9 +70,9 @@ flowchart TB
         DET[detect]
     end
     subgraph free["local CPU only"]
-        EXT[extract] --> DET
-        DET --> REN[render]
-        REN --> ENC[encode]
+        EXT["extract"] --> DET
+        DET --> REN["render"]
+        REN --> ENC["encode"]
     end
     DET -.->|raw answers, token usage,<br/>latency, request ids| CACHE[(work/…/detections/<br/>one JSON per detected frame)]
     CACHE -.->|render-only re-runs<br/>never call Jev again| REN
@@ -129,17 +129,17 @@ damping factors are configurable and were tuned by measurement, not taste:
 
 ```mermaid
 flowchart TB
-    F[frame 1568x882] --> L0[whole frame<br/>weight 1.0]
-    F --> G4[4 tiles<br/>2x2]
-    F --> G6[6 tiles<br/>3x2]
-    F --> G8[8 tiles<br/>4x2]
-    F --> G12[12 tiles<br/>4x3]
-    L0 --> P[[31 requests in parallel<br/>one round trip per frame]]
+    F[frame 1568x882] --> L0["whole frame<br/>weight 1.0"]
+    F --> G4["4 tiles, 2x2"]
+    F --> G6["6 tiles, 3x2"]
+    F --> G8["8 tiles, 4x2"]
+    F --> G12["12 tiles, 4x3"]
+    L0 --> P[["31 requests in parallel<br/>one round trip per frame"]]
     G4 --> P
     G6 --> P
     G8 --> P
     G12 --> P
-    P --> C[(raw candidates<br/>313 per frame)]
+    P --> C[("raw candidates<br/>313 per frame")]
 ```
 
 One Box question finds one thing, so each region is asked for up to **10 objects
@@ -156,15 +156,15 @@ area, which is what the images API accepts.
 
 ```mermaid
 flowchart TB
-    RAW[313 raw boxes<br/>from every region] --> THR{confidence<br/>>= 0.45}
+    RAW["313 raw boxes<br/>from every region"] --> THR{"confidence ≥ 0.45"}
     THR --> SCORE["score = confidence x level weight<br/>frame 1.0, tiles 0.75 + 0.25*sqrt(area ratio)"]
-    SCORE --> CONT{containment<br/>>= 0.7 inside a larger box?}
-    CONT -->|yes| DROP1[drop the smaller<br/>duplicate view or fragment]
-    CONT -->|no| NMS{greedy NMS, best first<br/>IoU >= 0.35 or centre within<br/>0.4 of the smaller diagonal}
-    NMS -->|suppressed| DROP2[drop the weaker]
-    NMS -->|survives| SLIV{small and thinner<br/>than 0.35?}
-    SLIV -->|yes| DROP3[drop as a sliver]
-    SLIV -->|no| OUT[detections<br/>one box per target, per class]
+    SCORE --> CONT{"containment ≥ 0.7<br/>inside a larger box?"}
+    CONT -->|yes| DROP1["drop the smaller<br/>duplicate view or fragment"]
+    CONT -->|no| NMS{"greedy NMS, best first<br/>IoU ≥ 0.35 or centre within<br/>0.4 of the smaller diagonal"}
+    NMS -->|suppressed| DROP2["drop the weaker"]
+    NMS -->|survives| SLIV{"small and thinner<br/>than 0.35?"}
+    SLIV -->|yes| DROP3["drop as a sliver"]
+    SLIV -->|no| OUT["detections<br/>one box per target, per class"]
 ```
 
 Four passes, all render-time policy:
