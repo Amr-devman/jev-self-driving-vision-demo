@@ -1,4 +1,8 @@
-# jev-self-driving-vision-demo
+# Jev Vision for Self driving
+
+[![Five seconds of the output: cars, motorcycles and buses boxed, with live latency, cost and detection counts](preview/demo.webp)](out/jev-vision-2300-2400_2026-10-15_23-18-12.mp4)
+
+*Click the preview for the full 60-second video (`out/jev-vision_…mp4`, 81 MB). GitHub does not play video inline in a README, so the animation above links to the file.*
 
 Cars, motorcycles and buses boxed in a dashcam video by TypeSafe's Jev, drawn
 back onto the video with a live readout of what the run costs.
@@ -239,6 +243,7 @@ answers can be retuned for free:
 ```
 jev_vision.py                 the whole pipeline
 clip/dashcam_23h00-24h00.mp4  the one-minute source clip
+preview/demo.webp             five-second animated preview used at the top of this README
 out/jev-vision_*.mp4          the latest rendered result
 requirements.txt              typesafe-sdk[pil], python-dotenv, numpy
 .env                          your API key (not committed)
