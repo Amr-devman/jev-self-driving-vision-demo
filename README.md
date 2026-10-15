@@ -57,9 +57,12 @@ Measured on the shipped clip:
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-echo 'TYPESAFE_API_KEY=...' > .env        # key from https://console.typesafe.ai
+cp .env.sample .env                       # then paste your key from https://console.typesafe.ai
 .venv/bin/python jev_vision.py            # runs the shipped clip end to end
 ```
+
+Without a key the run stops on the first request with an authentication error;
+`.env` is gitignored and `.env.sample` is the template.
 
 The output lands in `out/jev-vision_dashcam_<date>_<time>.mp4`. Add
 `--workers 16 --tile-workers 32` to go faster, or `--limit 120` to try a few
@@ -260,6 +263,7 @@ preview/demo.webp             five-second animated preview used at the top of th
 out/jev-vision_*.mp4          the latest rendered result
 requirements.txt              typesafe-sdk[pil], python-dotenv, numpy
 pyproject.toml                ruff lint config, for contributors (not needed to run)
+.env.sample                   template for the API key, copy it to .env
 .env                          your API key (not committed)
 work/                         caches and scratch frames (not committed)
 ```
