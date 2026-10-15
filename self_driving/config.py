@@ -110,5 +110,5 @@ def cache_tag(
     return f"v{CACHE_VERSION}-{fps_part}-{mode}-detect{detect_every}"
 
 
-# The repository root: this file lives in jev/, so the root is its parent.
+# The repository root: this file lives in the package, so the root is its parent.
 PROJECT_DIR = Path(__file__).resolve().parent.parent

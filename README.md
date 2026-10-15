@@ -86,16 +86,16 @@ flowchart TB
     CACHE -.->|render-only re-runs<br/>never call Jev again| REN
 ```
 
-* **extract** (`jev/extract.py`) reads the source frame rate with ffprobe (`r_frame_rate`, here
+* **extract** (`self_driving/extract.py`) reads the source frame rate with ffprobe (`r_frame_rate`, here
   `29962/1047`) and cuts frames at it, so the output cadence matches the input
   rather than approximating it. The requested window is checked against the real
   duration of the source first, so a bad timestamp fails in seconds.
-* **detect** (`jev/detection.py`) is the only stage that spends money. One JSON per detected frame
+* **detect** (`self_driving/detection.py`) is the only stage that spends money. One JSON per detected frame
   keeps Jev's raw answers, token usage, request ids and latency.
-* **render** (`jev/render.py`, `jev/fusion.py`, `jev/tracking.py`) applies every
+* **render** (`self_driving/render.py`, `self_driving/fusion.py`, `self_driving/tracking.py`) applies every
   threshold and the fusion policy to the cached answers. Changing colours,
   thresholds, NMS or the HUD costs nothing.
-* **encode** (`jev/encode.py`) joins the frames into H.264 at the source frame
+* **encode** (`self_driving/encode.py`) joins the frames into H.264 at the source frame
   rate.
 
 Caches are namespaced by frame rate, tiling layout and question set
@@ -247,7 +247,8 @@ answers can be retuned for free:
 
 ```
 jev_vision.py                 CLI entry point: arguments, the four stages, the summary
-jev/                          the pipeline, one module per concern
+self_driving/                 the pipeline, one module per concern
+                              (underscored: a hyphen is not valid in a Python package name)
   config.py                   constants, the classes, Config, the cache key
   video.py                    probing the source, guarding the requested window
   tiles.py                    cutting a frame into regions, and level weights

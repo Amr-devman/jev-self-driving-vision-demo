@@ -40,13 +40,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from jev.config import DEFAULT_MODEL, MAX_SIDE, PROJECT_DIR, Config, cache_tag
-from jev.detection import detect_all
-from jev.encode import encode
-from jev.extract import extract_frames
-from jev.render import render_all
-from jev.tiles import parse_tile_grids
-from jev.video import check_disk, parse_fps, parse_timestamp, validate_window
+from self_driving.config import DEFAULT_MODEL, MAX_SIDE, PROJECT_DIR, Config, cache_tag
+from self_driving.detection import detect_all
+from self_driving.encode import encode
+from self_driving.extract import extract_frames
+from self_driving.render import render_all
+from self_driving.tiles import parse_tile_grids
+from self_driving.video import check_disk, parse_fps, parse_timestamp, validate_window
 
 
 def main() -> int:
