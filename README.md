@@ -83,15 +83,17 @@ flowchart TB
     CACHE -.->|render-only re-runs<br/>never call Jev again| REN
 ```
 
-* **extract** reads the source frame rate with ffprobe (`r_frame_rate`, here
+* **extract** (`jev/extract.py`) reads the source frame rate with ffprobe (`r_frame_rate`, here
   `29962/1047`) and cuts frames at it, so the output cadence matches the input
   rather than approximating it. The requested window is checked against the real
   duration of the source first, so a bad timestamp fails in seconds.
-* **detect** is the only stage that spends money. One JSON per detected frame
+* **detect** (`jev/detection.py`) is the only stage that spends money. One JSON per detected frame
   keeps Jev's raw answers, token usage, request ids and latency.
-* **render** applies every threshold and the fusion policy to the cached
-  answers. Changing colours, thresholds, NMS or the HUD costs nothing.
-* **encode** joins the frames into H.264 at the source frame rate.
+* **render** (`jev/render.py`, `jev/fusion.py`, `jev/tracking.py`) applies every
+  threshold and the fusion policy to the cached answers. Changing colours,
+  thresholds, NMS or the HUD costs nothing.
+* **encode** (`jev/encode.py`) joins the frames into H.264 at the source frame
+  rate.
 
 Caches are namespaced by frame rate, tiling layout and question set
 (`work/v6-fps29962x1047-grids4-6-8-12-ov0-max10-detect4/`). Frame 900 sits at a
@@ -241,14 +243,31 @@ answers can be retuned for free:
 ## Repository layout
 
 ```
-jev_vision.py                 the whole pipeline
+jev_vision.py                 CLI entry point: arguments, the four stages, the summary
+jev/                          the pipeline, one module per concern
+  config.py                   constants, the classes, Config, the cache key
+  video.py                    probing the source, guarding the requested window
+  tiles.py                    cutting a frame into regions, and level weights
+  extract.py                  ffmpeg frame extraction at the source frame rate
+  detection.py                the paid stage: questions, parallel requests, caching
+  geometry.py                 box math on fractions of the frame
+  fusion.py                   score, containment, NMS, sliver guard
+  tracking.py                 template matching for the frames between detections
+  render.py                   boxes, HUD, and the render-time policy
+  encode.py                   ffmpeg encode
 clip/dashcam_23h00-24h00.mp4  the one-minute source clip
 preview/demo.webp             five-second animated preview used at the top of this README
 out/jev-vision_*.mp4          the latest rendered result
 requirements.txt              typesafe-sdk[pil], python-dotenv, numpy
+pyproject.toml                ruff lint config, for contributors (not needed to run)
 .env                          your API key (not committed)
 work/                         caches and scratch frames (not committed)
 ```
+
+The split follows the money: `detection.py` is the only module that talks to
+Jev, and everything it learns lands in `work/` as JSON. `fusion.py`, `render.py`
+and the thresholds in `config.py` decide what those answers mean, which is why
+they can be changed without spending anything.
 
 ## Using a longer recording
 

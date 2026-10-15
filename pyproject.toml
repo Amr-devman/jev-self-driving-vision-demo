@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "BLE", "SIM", "RUF"]
+ignore = [
+    # One region failing must not end a 400-frame run. The exception is caught,
+    # recorded in that frame's cache entry, and the frame renders without boxes.
+    "BLE001",
+    # int(round(x)) is kept deliberately: coordinates can arrive as numpy
+    # scalars, and round() on those does not always give a Python int.
+    "RUF046",
+    # ordinal() keeps its if/else; the equivalent nested ternary is harder to read.
+    "SIM108",
+]
