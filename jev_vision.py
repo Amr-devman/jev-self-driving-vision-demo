@@ -302,10 +302,18 @@ def validate_window(cfg: Config, total: int) -> None:
                          f"pass a shorter window or a lower --fps.")
 
 
+def existing_ancestor(path: Path) -> Path:
+    """The closest directory that exists: work/ is created during a run and is
+    not in git, so a fresh clone has no work directory at all."""
+    while not path.exists() and path != path.parent:
+        path = path.parent
+    return path
+
+
 def check_disk(cfg: Config, total: int) -> None:
     """A frame costs roughly 350 KB on disk and a rendered frame roughly 450 KB."""
     needed = total * (350_000 + 450_000) * 1.1
-    free = shutil.disk_usage(cfg.workdir.parent).free
+    free = shutil.disk_usage(existing_ancestor(cfg.workdir)).free
     if free < needed:
         raise SystemExit(
             f"error: need about {needed / 1e9:.1f} GB for {total} frames + rendered frames, "
