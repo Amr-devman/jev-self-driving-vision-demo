@@ -1,0 +1,3 @@
+typesafe-sdk[pil]==0.7.5
+python-dotenv==1.2.4
+numpy>=2.0

@@ -1,0 +1,33 @@
+# Local caches: this is the paid part, one JSON per detected frame. Regenerable
+# with the API key, so it never belongs in git.
+work/
+
+# The 55-minute source recording the clip was cut from (1.8 GB, not shipped).
+video-1080p-remux.mp4
+
+# Agent tooling, not part of the solution
+.agents/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# Download leftovers
+*.aria2
+
+# out/ keeps only the latest rendered video in the repo; everything else in it
+# (earlier renders) stays local. Update the exception when you commit a new one.
+out/*
+!out/jev-vision-2300-2400_2026-10-15_23-18-12.mp4
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Agent skill lock, not part of the solution
+skills-lock.json
