@@ -1,9 +1,10 @@
 # jev-self-driving-vision-demo
 
-Object detection over a dashcam video where **every frame is a Jev question**:
-TypeSafe's System One model boxes cars, motorcycles and buses frame by frame,
-the detections are drawn back onto the video, and the screen shows what Jev
-costs while it runs.
+Cars, motorcycles and buses boxed in a dashcam video by TypeSafe's Jev, drawn
+back onto the video with a live readout of what the run costs.
+
+Jev looks at one frame in four. The frames between are followed by a local
+template tracker, which makes no API call and costs nothing.
 
 Built from the TypeSafe docs: [images](https://docs.typesafe.ai/images),
 [Box primitive](https://docs.typesafe.ai/primitives/box),
@@ -22,7 +23,7 @@ flowchart LR
 ## What the demo shows
 
 A dashcam minute from Jakarta, 23:00–24:00, processed at the source's own frame
-rate. Three classes: **car**, **motorcycle**, **bus**.
+rate. Three classes: car, motorcycle, bus.
 
 The video's top-right corner reports, live:
 
@@ -32,19 +33,19 @@ The video's top-right corner reports, live:
 | `TOTAL COST` | Cumulative cost, accumulated frame by frame |
 | `DETECTIONS` | Cumulative accepted detections |
 
-Boxes are **solid** when Jev answered for that frame and **dashed with a `~`**
-when the box was tracked locally between detections.
+Solid boxes come from a Jev answer for that frame. Dashed boxes, labelled with a
+`~`, were tracked locally between answers.
 
 Measured on the shipped clip:
 
 | | value |
 | - | - |
 | Frames | 1717 at 28.617 fps (the clip's own rate) |
-| Jev requests | 13,330 — 31 per detected frame |
+| Jev requests | 13,330 (31 per detected frame) |
 | Raw boxes from Jev | 134,580 (313 per detected frame) |
-| Detections after fusion | 13,544 (7.9 per frame) — **90% of raw boxes removed** |
+| Detections after fusion | 13,544 (7.9 per frame); fusion removes 90% of raw boxes |
 | Jev latency | mean 642 ms per detected frame |
-| Cost | **$1.0223** for the minute |
+| Cost | $1.0223 for the minute |
 | Runtime | ~5 min with `--workers 4 --tile-workers 16` |
 
 ## Quick start
@@ -78,21 +79,21 @@ flowchart TB
     CACHE -.->|render-only re-runs<br/>never call Jev again| REN
 ```
 
-* **extract** cuts frames with ffmpeg at the source's own rate — read with
-  ffprobe as `r_frame_rate` (`29962/1047`), so the output cadence matches the
-  input instead of approximating it. The requested window is validated against
-  the real duration of the source first, so a bad timestamp fails in seconds.
+* **extract** reads the source frame rate with ffprobe (`r_frame_rate`, here
+  `29962/1047`) and cuts frames at it, so the output cadence matches the input
+  rather than approximating it. The requested window is checked against the real
+  duration of the source first, so a bad timestamp fails in seconds.
 * **detect** is the only stage that spends money. One JSON per detected frame
   keeps Jev's raw answers, token usage, request ids and latency.
 * **render** applies every threshold and the fusion policy to the cached
-  answers. Changing colours, thresholds, NMS or the HUD is free.
+  answers. Changing colours, thresholds, NMS or the HUD costs nothing.
 * **encode** joins the frames into H.264 at the source frame rate.
 
 Caches are namespaced by frame rate, tiling layout and question set
-(`work/v6-fps29962x1047-grids4-6-8-12-ov0-max10-detect4/`). Frame 900 means a
+(`work/v6-fps29962x1047-grids4-6-8-12-ov0-max10-detect4/`). Frame 900 sits at a
 different timestamp at 30 fps than at 28.617 fps, and a different question set
-gives different answers: sharing a cache across those would silently mislabel
-detections, so each combination gets its own directory.
+gives different answers, so each combination gets its own directory instead of
+silently mixing records.
 
 ### 2. Detect one frame, track the next three
 
@@ -107,23 +108,23 @@ stateDiagram-v2
     Detect --> Detect: next keyframe
 ```
 
-Jev is asked about **one frame in four** (`--detect-every 4`). The frames between
-are followed by template matching in numpy: the previous box becomes a template,
-a coarse pass on a downscaled grid finds it, a full-resolution pass lands it
+Jev answers one frame in four (`--detect-every 4`). The frames between are
+followed by template matching in numpy. The previous box becomes a template, a
+coarse pass on a downscaled grid finds it, a full-resolution pass lands it
 within a pixel, and the match quality (normalized cross-correlation) decides
 whether the track survives. A track that loses its object is dropped rather than
 left sitting on empty road.
 
-This buys two things — **cost** (a quarter of the frames reach the API) and
-**steadiness**. A fresh detection is an independent estimate, so boxes twitch
-even for a car driving straight; tracked frames follow the pixels instead. Both
-damping factors are configurable and were tuned by measurement, not taste:
+A quarter of the frames reach the API, and the boxes move with the object
+instead of twitching. A fresh detection is an independent estimate, so boxes
+jitter even for a car driving straight; tracked frames follow the pixels. Both
+damping factors were tuned by measurement:
 
 | policy | car box movement, frame to frame |
 | - | - |
 | detect every frame | 13.0 px |
 | `--track-smooth 0.6 --detect-blend 0.75` | 6.0 px, snapping 18.5 px on detect frames |
-| `--track-smooth 0.6 --detect-blend 0.35` (default) | **3.3 px**, snapping 8.4 px |
+| `--track-smooth 0.6 --detect-blend 0.35` (default) | 3.3 px, snapping 8.4 px |
 
 ### 3. Ask four tilings at once
 
@@ -142,15 +143,15 @@ flowchart TB
     P --> C[("raw candidates<br/>313 per frame")]
 ```
 
-One Box question finds one thing, so each region is asked for up to **10 objects
-per class** — "the 1st, 2nd, … 10th most prominent car / bus / motorcycle" —
-because the questions inside a request are answered in parallel. Each region
-also carries a presence Noul per class, which gates its boxes.
+A Box question returns one box, so each region is asked for up to 10 objects per
+class ("the 1st, 2nd, … 10th most prominent car"), and Jev answers those
+questions in parallel. Each region also carries a presence Noul per class, which
+gates its boxes.
 
-The different cuts are the point: an object sitting on a boundary in one grid is
-whole in another, since 4, 6, 8 and 12 divide the frame in different places. No
-overlap padding is needed. Tiles are at least 256 px per side and 78,400 px in
-area, which is what the images API accepts.
+An object that sits on a boundary in one grid is whole in another, because 4, 6,
+8 and 12 divide the frame in different places. No overlap padding is needed.
+Tiles stay above 256 px per side and 78,400 px in area, the floor the images API
+accepts.
 
 ### 4. Overlay everything, then reduce like a detector
 
@@ -167,22 +168,21 @@ flowchart TB
     SLIV -->|no| OUT["detections<br/>one box per target, per class"]
 ```
 
-Four passes, all render-time policy:
+Four passes, all applied while rendering:
 
-1. **Score** — `confidence × level weight`. The whole frame weighs 1.0, a tile
-   less: the multi-scale rule detectors have used since image pyramids, to trust
-   the prediction made with more context.
-2. **Containment** — a smaller box sitting at least 0.7 inside a larger one is a
+1. **Score.** `confidence × level weight`, where the whole frame weighs 1.0 and a
+   tile weighs less (`0.75 + 0.25 × √(tile area / frame area)`). Two answers for
+   one object then sort by how much context each had.
+2. **Containment.** A smaller box sitting at least 0.7 inside a larger one is a
    duplicate view or a fragment, and goes. A clearly stronger inner box survives
-   (score > 1.15× the outer one), keeping the usual score-first behaviour.
-3. **NMS** — greedy non-maximum suppression, best first, suppressing on IoU ≥
-   0.35 **or** centre distance within 0.4 of the smaller box's diagonal. The
-   centre test is the face-detector trick for loose boxes: two views of one car
-   can overlap below any usable IoU while their centres coincide. This mattered
-   here — with IoU alone, Jev's loose boxes left the same car boxed twice.
-4. **Sliver guard** — small boxes thinner than 0.35 are rejected, the way
-   detectors constrain anchors by aspect ratio. It is the one kind of box neither
-   containment nor NMS can rule out, because it overlaps nothing.
+   (score > 1.15× the outer).
+3. **NMS.** Greedy non-maximum suppression, best first, suppressing on IoU ≥ 0.35
+   or centre distance within 0.4 of the smaller box's diagonal. Face detectors
+   use the same centre test, because loose boxes overlap little while sitting on
+   the same face. With IoU alone, Jev's boxes left the same car in two boxes.
+4. **Sliver guard.** Small boxes thinner than 0.35 are rejected, the way detectors
+   constrain anchors by aspect ratio. A sliver overlaps nothing, so containment
+   and NMS cannot catch it.
 
 ## Cost
 
@@ -194,7 +194,7 @@ cost += response.usage.input_tokens * $42 / 1e9      # output tokens are free
 
 $42 per billion input tokens is TypeSafe's published rate. Every response also
 carries `usage.output_tokens` and a `request_id`, both kept in the cache.
-Tracked frames make no API call, so 3 of every 4 frames cost exactly $0.00.
+Tracked frames make no API call, so 3 of every 4 frames cost $0.00.
 
 ## Options
 
@@ -227,8 +227,8 @@ Tracked frames make no API call, so 3 of every 4 frames cost exactly $0.00.
 --video clip/…mp4       source video
 ```
 
-Everything after the paid stage — thresholds, fusion, tiling, HUD — is applied
-while rendering, so it can be retuned on cached answers for free:
+Thresholds, fusion, tiling and the HUD are applied while rendering, so cached
+answers can be retuned for free:
 
 ```sh
 .venv/bin/python jev_vision.py --render-only --nms-iou 0.3 --box-threshold 0.5
@@ -265,26 +265,26 @@ ffmpeg -ss 23:00 -i full-dashcam.mp4 -t 60 -c:v libx264 -crf 22 -pix_fmt yuv420p
 
 ## Requirements and limits
 
-* **Images and Box questions are TypeSafe "Danger Zone" features** — off by
-  default, enabled per request with `TypeSafe-Danger-Zone-Images: true`. Accuracy
-  changes as the models change, so treat this as a prototype and tune the
-  thresholds on your own footage. See
+* TypeSafe ships images and Box questions as "Danger Zone" features, off by
+  default: every request carrying an image sends
+  `TypeSafe-Danger-Zone-Images: true`. Accuracy changes as the models change, so
+  tune the thresholds on your own footage. See
   [docs.typesafe.ai/images](https://docs.typesafe.ai/images).
 * Images must be 256–1568 px per side, so 1920×1080 frames are sent as 1568×882
   and each tile at its own native size.
-* The output has **no audio track**; the source clip is video-only.
-* Disk: ~1.5 GB peak for a full run, ~30 MB kept (the detection cache).
-  RAM stays around 200 MB at `--workers 1`, about 1 GB at `--workers 32`.
-* `numpy` is only used by the tracker, never by the API calls.
+* The output has no audio track; the source clip is video-only.
+* Disk: ~1.5 GB peak for a full run, ~30 MB kept (the detection cache). RAM
+  stays around 200 MB at `--workers 1`, about 1 GB at `--workers 32`.
+* numpy is used by the tracker only, never by the API calls.
 
-## Honest notes
+## Caveats
 
-* The `Box` primitive is "dreamer-ready": boxes are loose and occasional false
-  positives appear (an out-of-focus object at the frame edge, a rider counted
-  twice in dense traffic). Fusion removes 90% of raw boxes; the rest is what the
-  model saw.
-* Detection without tracking costs about 4× more ($4.07 for this minute) because
-  every frame would pay for all 31 regions.
-* Numbers in this README were measured on the shipped clip with `jev-1.14.0`;
-  re-running will produce new figures for cost per frame and latency, and the
-  answers themselves can shift as Jev's weights are updated.
+* TypeSafe labels the Box primitive "dreamer-ready" and it shows. Boxes are
+  loose, and false positives turn up: an out-of-focus object at the frame edge, a
+  rider counted twice in dense traffic. Fusion removes 90% of raw boxes; the rest
+  is what the model saw.
+* Detecting every frame costs about 4× more ($4.07 for this minute), because each
+  frame would pay for all 31 regions.
+* The figures above were measured on the shipped clip with `jev-1.14.0`.
+  Re-running produces new cost and latency numbers, and the answers themselves
+  can shift when Jev's weights change.
